@@ -1,0 +1,9 @@
+*.xls
+*.xlsx
+*.json
+/build
+/dist
+*.spec
+/homevenv
+/workvenv
+.idea
