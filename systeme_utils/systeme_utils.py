@@ -4,12 +4,12 @@ import json
 from typing import Tuple, Any
 
 VARIABLE_TYPES = {
-    "0": "AI",
-    "1": "AO",
-    "2": "AV",
-    "3": "BI",
-    "4": "BO",
-    "5": "BV"
+    0: "AI",
+    1: "AO",
+    2: "AV",
+    3: "BI",
+    4: "BO",
+    5: "BV"
 }
 
 
@@ -51,32 +51,40 @@ class JsonConverter:
         name, ext = os.path.splitext(self.file_name)
         df_dict = {}
         for row in df_config.itertuples(index=False, name=None):
-            name, address = self.parse_row(row)
-            if name is None:
+            var_name, var_address = self.parse_row(row)
+            if var_name is None:
                 continue
-            df_dict[name] = address
+            df_dict[var_name] = var_address
 
         with open(f'{os.path.join(self.file_path, name)}.json', 'w') as outfile:
             json.dump(df_dict, outfile)
 
     @staticmethod
-    def parse_row(row: Tuple[Any, ...]) -> Tuple[str, str] | None:
+    def parse_row(row: Tuple[Any, ...]) -> Tuple[str|None, str|None]:
         """
         Parse a configuration row to get the variable data
         :param row: Row from exported configuration with 3 columns: object-name, object-type, object-instance
         :return: Pair for json dictionary (Variable name: BACNet address)
         """
-        if row[0] == "" or row[1] == "" or row[2] == "":
-            return None
+        if not isinstance(row[0], str) or row[0] == "":
+            return None, None
 
-        var_type = VARIABLE_TYPES.get(row[1], None)
+        type_value = int(row[1])
+        if type_value is None:
+            return None, None
+
+        index_value = int(row[2])
+        if index_value is None:
+            return None, None
+
+        var_type = VARIABLE_TYPES.get(type_value, None)
         if var_type is None:
-            return None
+            return None, None
 
         try:
-            var_index = str(int(row[2]) & 0xffff)
+            var_index = str(index_value & 0xffff)
         except ValueError:
-            return None
+            return None, None
 
         return row[0], (var_type + var_index)
 
