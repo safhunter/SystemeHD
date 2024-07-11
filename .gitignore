@@ -6,4 +6,5 @@
 *.spec
 /homevenv
 /workvenv
+/workvenv_11
 .idea

@@ -1,7 +1,9 @@
 import os
 from fnmatch import fnmatch
-from systeme_utils import JSON, SHOW, PLATFORM
+from systeme_utils import JSON, SHOW, PLATFORM, NEW_JSON
 from systeme_utils.systeme_utils import JsonConverter, PlatformConverter
+
+
 class App:
     def __init__(self, name, version):
         self.name, self.version = name, version
@@ -13,6 +15,9 @@ class App:
         if args['command'] == JSON:
             converter = JsonConverter(os.path.dirname(args['filename']), os.path.basename(args['filename']))
             converter.convert()
+        if args['command'] == NEW_JSON:
+            converter = JsonConverter(os.path.dirname(args['filename']), os.path.basename(args['filename']))
+            converter.convert_new()
         if args['command'] == PLATFORM:
             if args['batch']:
                 root = args['batch']
@@ -29,5 +34,4 @@ class App:
                 converter = PlatformConverter(os.path.dirname(args['filename']), os.path.basename(args['filename']))
                 converter.convert()
         elif args['command'] == SHOW:
-             pass
-
+            pass

@@ -1,6 +1,18 @@
 import pandas as pd
 import os
 import json
+from typing import Tuple, Any
+
+VARIABLE_TYPES = {
+    "0": "AI",
+    "1": "AO",
+    "2": "AV",
+    "3": "BI",
+    "4": "BO",
+    "5": "BV"
+}
+
+
 class JsonConverter:
     def __init__(self, file_path: str, file_name: str):
         self.file_path = file_path
@@ -12,7 +24,7 @@ class JsonConverter:
     def convert(self):
         try:
             df_config = pd.read_excel(os.path.join(self.file_path, self.file_name), header=1, usecols="A:B")
-        except(IOError, SystemError) as ex:
+        except (IOError, SystemError) as ex:
             print(f"Can't open a file: {self.file_name}. Cause:\n{ex}")
             return None
 
@@ -23,6 +35,51 @@ class JsonConverter:
 
         with open(f'{os.path.join(self.file_path, name)}.json', 'w') as outfile:
             json.dump(df_dict, outfile)
+
+    def convert_new(self):
+        """
+        Convert new configuration export file to json dictionary with
+        the variables as pairs (Variable name: BACNet address). Save this dictionary to json file with the same name.
+        :return: None
+        """
+        try:
+            df_config = pd.read_excel(os.path.join(self.file_path, self.file_name), skiprows=7, usecols=[2, 3, 4])
+        except (IOError, SystemError) as ex:
+            print(f"Can't open a file: {self.file_name}. Cause:\n{ex}")
+            return None
+
+        name, ext = os.path.splitext(self.file_name)
+        df_dict = {}
+        for row in df_config.itertuples(index=False, name=None):
+            name, address = self.parse_row(row)
+            if name is None:
+                continue
+            df_dict[name] = address
+
+        with open(f'{os.path.join(self.file_path, name)}.json', 'w') as outfile:
+            json.dump(df_dict, outfile)
+
+    @staticmethod
+    def parse_row(row: Tuple[Any, ...]) -> Tuple[str, str] | None:
+        """
+        Parse a configuration row to get the variable data
+        :param row: Row from exported configuration with 3 columns: object-name, object-type, object-instance
+        :return: Pair for json dictionary (Variable name: BACNet address)
+        """
+        if row[0] == "" or row[1] == "" or row[2] == "":
+            return None
+
+        var_type = VARIABLE_TYPES.get(row[1], None)
+        if var_type is None:
+            return None
+
+        try:
+            var_index = str(int(row[2]) & 0xffff)
+        except ValueError:
+            return None
+
+        return row[0], (var_type + var_index)
+
 
 class PlatformConverter:
     def __init__(self, file_path: str, file_name: str):
@@ -35,7 +92,7 @@ class PlatformConverter:
     def convert(self):
         try:
             df_config = pd.read_excel(os.path.join(self.file_path, self.file_name), header=1, usecols="A:D")
-        except(IOError, SystemError) as ex:
+        except (IOError, SystemError) as ex:
             print(f"Can't open a file: {self.file_name}. Cause:\n{ex}")
             return None
 
@@ -44,11 +101,13 @@ class PlatformConverter:
             df_list.extend(self.parce_row(row))
 
         name, ext = os.path.splitext(self.file_name)
-        df = pd.DataFrame(df_list, index=None, columns=["Сигнал", "Описание", "Тип", "Привязка", "Тип объекта", "Экземпляр объекта", "Свойство объекта", "Индекс", "Протокольный тип"])
+        df = pd.DataFrame(df_list, index=None,
+                          columns=["Сигнал", "Описание", "Тип", "Привязка", "Тип объекта", "Экземпляр объекта",
+                                   "Свойство объекта", "Индекс", "Протокольный тип"])
         df.to_excel(f'{os.path.join(self.file_path, name)}_plat.xlsx', sheet_name='BACnetAddressMap', index=False)
 
     @staticmethod
-    def parce_row(row :tuple):
+    def parce_row(row: tuple):
         area = row[1][:2]
         line_1 = []
         line_2 = []
@@ -161,4 +220,4 @@ class PlatformConverter:
 
         if line_2:
             return line_1, line_2
-        return (line_1, )
+        return (line_1,)
